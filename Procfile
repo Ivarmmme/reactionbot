@@ -1,1 +1,1 @@
-python react.py
+python main.py
