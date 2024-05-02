@@ -1,3 +1,4 @@
+import json
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 from telegram import Update
 from collections import defaultdict
@@ -5,7 +6,15 @@ from collections import defaultdict
 # Specify the user IDs you want to track
 SPECIFIED_USERS = {6369933143, 7196174452}  # Replace with actual user IDs
 
-message_counts = defaultdict(int)
+# File path to store the counts
+COUNTS_FILE = 'message_counts.json'
+
+# Load existing counts from the file if it exists
+try:
+    with open(COUNTS_FILE, 'r') as file:
+        message_counts = json.load(file)
+except FileNotFoundError:
+    message_counts = defaultdict(int)
 
 async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text('Hello! I will start tracking messages from specified users.')
@@ -16,6 +25,10 @@ async def count_messages(update: Update, context: CallbackContext) -> None:
         user_id = update.message.from_user.id
         if user_id in SPECIFIED_USERS:
             message_counts[user_id] += 1
+            # Save the updated counts to the file
+            with open(COUNTS_FILE, 'w') as file:
+                # Convert defaultdict to a regular dict for JSON serialization
+                json.dump(dict(message_counts), file)
 
 async def rankings(update: Update, context: CallbackContext) -> None:
     ranked_users = [(user_id, count) for user_id, count in message_counts.items() if user_id in SPECIFIED_USERS]
