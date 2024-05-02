@@ -1,49 +1,51 @@
-import telegram
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler 
-import asyncio 
-import json  # For storing seen messages in a JSON file
+from collections import defaultdict
 
-# ----------------- Configuration ----------------- 
-YOUR_BOT_TOKEN = "7116973701:AAHkNxvQqS85ko0sBtQ_QoVM90UKfzAOgco" 
-TARGET_USER_ID = 6369933143 
-STORAGE_FILE = "seen_messages.json" 
-# -----------------------------------------------
+# Specify the user IDs you want to track
+SPECIFIED_USERS = {123456789, 987654321}  # Replace with actual user IDs
 
-# Load previously seen message IDs
-try:
-    with open(STORAGE_FILE, "r") as f:
-        seen_message_ids = json.load(f)
-except FileNotFoundError:
-    seen_message_ids = []
+message_counts = defaultdict(int)
 
-async def react_to_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Reacts to new messages from the target user."""
+async def start(update: Update, context: CallbackContext) -> None:
+    await update.message.reply_text('Hello! I will start tracking messages from specified users.')
 
-    message_id = update.message.message_id
-    if update.message.from_user.id == TARGET_USER_ID and message_id not in seen_message_ids:
-        await context.bot.send_reaction(chat_id=update.message.chat_id, 
-                                        message_id=message_id,
-                                        emoji='👍') 
-        seen_message_ids.append(message_id)
-        save_seen_messages()
+async def count_messages(update: Update, context: CallbackContext) -> None:
+    # Check if the update contains a message
+    if update.message:
+        user_id = update.message.from_user.id
+        if user_id in SPECIFIED_USERS:
+            message_counts[user_id] += 1
 
-def save_seen_messages():
-    """Saves the list of seen message IDs to the storage file."""
+async def rankings(update: Update, context: CallbackContext) -> None:
+    ranked_users = [(user_id, count) for user_id, count in message_counts.items() if user_id in SPECIFIED_USERS]
+    ranked_users.sort(key=lambda item: item[1], reverse=True)
+    
+    ranking_text = 'Message Rankings (Specified Users):\n'
+    for user_id, count in ranked_users:
+        ranking_text += f'User {user_id}: {count} messages\n'
+    
+    await update.message.reply_text(ranking_text)
 
-    with open(STORAGE_FILE, "w") as f:
-        json.dump(seen_message_ids, f)
+async def error_handler(update: object, context: CallbackContext) -> None:
+    # Log the error
+    print(f"An error occurred: {context.error}")
 
-async def main():
-    """Bot setup and initialization."""
+def main() -> None:
+    application = Application.builder().token('YOUR_TOKEN').build()
 
-    application = Application.builder().token(YOUR_BOT_TOKEN).build()
-    await application.initialize() 
+    start_handler = CommandHandler('start', start)
+    count_handler = MessageHandler(filters.TEXT & filters.ChatType.GROUPS, count_messages)
+    rankings_handler = CommandHandler('rankings', rankings)
 
-    application.add_handler(MessageHandler(None, react_to_user))  # React to all message types
+    application.add_handler(start_handler)
+    application.add_handler(count_handler)
+    application.add_handler(rankings_handler)
 
-    await application.start()
-    await application.idle()
+    # Register the error handler
+    application.add_error_handler(error_handler)
+
+    application.run_polling()
 
 if __name__ == '__main__':
-    asyncio.run(main()) 
+    main()
