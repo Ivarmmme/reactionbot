@@ -3,7 +3,7 @@ from telegram import Update
 from collections import defaultdict
 
 # Specify the user IDs you want to track
-SPECIFIED_USERS = {123456789, 987654321}  # Replace with actual user IDs
+SPECIFIED_USERS = {6369933143, 7196174452}  # Replace with actual user IDs
 
 message_counts = defaultdict(int)
 
@@ -32,7 +32,7 @@ async def error_handler(update: object, context: CallbackContext) -> None:
     print(f"An error occurred: {context.error}")
 
 def main() -> None:
-    application = Application.builder().token('YOUR_TOKEN').build()
+    application = Application.builder().token('7116973701:AAHkNxvQqS85ko0sBtQ_QoVM90UKfzAOgco').build()
 
     start_handler = CommandHandler('start', start)
     count_handler = MessageHandler(filters.TEXT & filters.ChatType.GROUPS, count_messages)
